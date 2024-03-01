@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actor Details</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="actor-details-container">
+        <h1 id="actor-name">Actor Name</h1>
+        <div id="actor-movies" class="movies-grid"></div>
+    </div>
+
+<!-- Modal Structure -->
+<!-- Προσθήκη του κουμπιού close (X) -->
+<div id="movieModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close-button" onclick="closeModal()">&times;</span>
+      <!-- Movie details will be added here -->
+    </div>
+  </div>
+
+  <!--OR CAN USE BOOTSTRAP COMPONENTS:
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <a class="navbar-brand" href="#">Βιβλιοθήκη Ταινιών</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNav">
+    <ul class="navbar-nav">
+      <li class="nav-item active">
+        <a class="nav-link" href="#">Αρχική <span class="sr-only">(current)</span></a>
+      </li>
+    </ul>
+    </div>
+</nav>
+-->
+<script>
+
+  // Take ID From Actor from URL:
+const urlParams = new URLSearchParams(window.location.search);
+const actorId = urlParams.get('actorId');
+
+// Call API TMDB to get details of the actor
+const apiKey = '237381b5e53dc74a9c7f25df244ff47e';
+//
+const actorDetailsUrl = `https://api.themoviedb.org/3/person/${actorId}?api_key=${apiKey}&language=en-US`;
+const actorMoviesUrl = `https://api.themoviedb.org/3/person/${actorId}/movie_credits?api_key=${apiKey}&language=en-US`;
+
+//AJAX USED! FETCH IS AN IMPLEMENTATION OF AJAX TECHNIQUE: 
+
+// Function for Data Request from API:
+async function fetchData(url){
+    const response = await fetch(url);
+    const data = await response.json();
+    return data;
+}
+
+/* OR CAN USE: jQuery
+function fetchData(url){
+  return $.ajax({
+    url: url,
+    dataType: 'json'
+  })
+  *///USING JQUERY
+
+// Function to display the details of the actor
+async function displayActorDetails() {
+    try {
+        const actorDetails = await fetchData(actorDetailsUrl);
+        document.getElementById('actor-name').textContent = `${actorDetails.name}'s Movies`;
+        const actorMovies = await fetchData(actorMoviesUrl);
+
+        const moviesContainer = document.getElementById('actor-movies');
+        moviesContainer.innerHTML = ''; // Clear the container first
+        
+        // Display the actor's movies
+        actorMovies.cast.forEach(movie => {
+            const movieElement = document.createElement('div');
+            movieElement.className = 'movie';
+
+            // Check if a poster path is available, and use a placeholder if not
+           let moviePoster = 'path/to/your/placeholder-image.jpg';
+           if (movie.poster_path) {
+           moviePoster = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+           }
+
+    
+    movieElement.innerHTML = `
+        <img src="${moviePoster}" alt="${movie.title}" style="width:100px;">
+        <p>${movie.title}</p>
+        <button onclick="toggleWatched(${movie.id})" id="watched-${movie.id}">${movie.watched ? 'Watched:Yes' : 'Mark as Watched'}</button>
+        <button class="details-btn" data-movie-id="${movie.id}">More details</button>
+    `;
+         
+    //EVENT LISTENER!
+const detailsButton = movieElement.querySelector('.details-btn');
+detailsButton.addEventListener('click', function() {
+    showMovieDetails(movie.id);
+});
+
+            moviesContainer.appendChild(movieElement);
+        });
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+displayActorDetails();
+
+// Add event listener to the "More Details" buttons
+document.querySelectorAll('.details-btn').forEach(button => {
+    button.addEventListener('click', async () => {
+        const movieId = button.dataset.movieId;
+        const movieDetailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`;
+        const movieDetails = await fetchData(movieDetailsUrl);
+
+        // Use SWEETALERT to display the movie details in a pop-up OR CAN USE THE JQUERY: $('.details-btn').each(function(){});
+        Swal.fire({
+            title: movieDetails.title,
+            text: movieDetails.overview,
+            imageUrl: `https://image.tmdb.org/t/p/w500${movieDetails.poster_path}`,
+            imageWidth: 400,
+            imageAlt: 'Movie poster',
+            confirmButtonText: 'Close'
+        });
+    });
+});
+
+
+    function createModal(content) {
+        // Subtractact Unused Modals
+        const existingModal = document.querySelector('.modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+    
+        // Make A New Modal:
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+    
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+        modalContent.innerHTML = content;
+
+        // Close Button Of The Modal:
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'close-button';
+        closeBtn.textContent = '×'; // Χρησιμοποιήστε το κείμενο × αντί για το HTML entity για σαφήνεια
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+            modal.remove();
+        };
+    
+        modalContent.prepend(closeBtn);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+        modal.style.display = 'block';
+    }
+
+    document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('details-btn')) {
+        console.log("Details button clicked"); // to check if the event listener is triggered
+        const movieId = e.target.getAttribute('data-movie-id');
+        console.log("Movie ID: ", movieId); // to check if the correct movie ID is retrieved
+        showMovieDetails(movieId);
+    }
+});
+
+
+
+    // Function to close the modal
+function closeModal() {
+    const modal = document.getElementById('movieModal');
+    modal.style.display = 'none';
+}
+
+// Function to showMovie Details:
+async function showMovieDetails(movieId) {
+    const movieDetailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`;
+    const movieDetails = await fetchData(movieDetailsUrl);
+    
+    const content = `
+        <img src="https://image.tmdb.org/t/p/w500${movieDetails.poster_path}" alt="${movieDetails.title}" class="modal-movie-poster">
+        <div class="modal-movie-details">
+            <h2>${movieDetails.title}</h2>
+            <p>${movieDetails.overview}</p>
+            <p>Release Date: ${movieDetails.release_date}</p>
+            <p>Rating: ${movieDetails.vote_average}</p>
+        </div>
+    `;
+    
+    createModal(content);
+}
+
+modalContent.insertAdjacentHTML('beforeend',content);
+model.style.display='block';
+
+
+function toggleWatched(movieId) {
+    const watchedButton = document.getElementById(`watched-${movieId}`);
+    //Check if the button has already the class 'button-watched' to avoid UNDO:
+    if (!watchedButton.classList.contains('button-watched')) {
+        //Change the Content and the class of the button
+        watchedButton.textContent = 'Watched';
+        watchedButton.classList.remove('button-unwatched');
+        watchedButton.classList.add('button-watched');
+        
+        //Send: AJAX call: !DATABASE UPDATE! FROM PHP FILE!
+        $.post('save_movie.php', { movie_id: movieId, watched: 1 }, function(response) {
+            console.log(response);
+        }).fail(function(xhr, status, error) {
+            console.error("An error occurred: " + error);
+        });
+    }
+}
+
+
+toggleWatched(1, true); 
+
+
+
+// Add event listener for the "More Details" buttons
+document.querySelectorAll('.details-btn').forEach(button => {
+    button.addEventListener('click', async () => {
+      const movieId = button.dataset.movieId;
+      const movieDetailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${apiKey}&language=en-US`;
+      const movieDetails = await fetchData(movieDetailsUrl);
+      
+      // Here you would create a modal element or update an existing one
+      const modal = document.createElement('div');
+      modal.innerHTML = `
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <img src="https://image.tmdb.org/t/p/w500${movieDetails.poster_path}" alt="${movieDetails.title}">
+          <h2>${movieDetails.title}</h2>
+          <p>${movieDetails.overview}</p>
+          <p>Release Date: ${movieDetails.release_date}</p>
+          <p>Rating: ${movieDetails.vote_average}</p>
+        </div>
+      `;
+      modal.classList.add('modal');
+      
+      // Append the modal to the body or to a specific element
+      document.body.appendChild(modal);
+      
+      // Add event listener to close the modal when the close button is clicked
+      modal.querySelector('.close').addEventListener('click', () => {
+        modal.remove();
+      });
+    });
+  });
+  
+function createActorCard(actor) {
+    const actorDiv = document.createElement('div');
+    actorDiv.classList.add('actor-card');
+    actorDiv.innerHTML = `
+        <img src="https://image.tmdb.org/t/p/w500${actor.profile_path}" alt="${actor.name}">
+        <h3>${actor.name}</h3>
+        <p>${actor.known_for_department}</p>
+        <button class="details-btn" onclick="showDetails(${actor.id})">More details</button>
+    `;
+    return actorDiv;
+}
+
+function showActorMovies(actorMovies) {
+    const grid = document.querySelector('.actor-grid');
+    grid.innerHTML = '';
+    actorMovies.forEach(movie => {
+        const card = createActorCard(movie);
+        grid.appendChild(card);
+    });
+}
+</script>
+</body>
+</html>
