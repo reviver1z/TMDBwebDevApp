@@ -1,4 +1,4 @@
-# TMDB PROJECT USING: html,css,javascript(the Core).php,sq(DataBase Update).ajax (Technique:Fetches etc). Using Libraries: BootStrap,jQuery,sweetAlert.
+# TMDB PROJECT: USING: html,css,javascript(the Core).php,sq(DataBase Update).ajax (Technique:Fetches etc). USING LIBRARIES: BootStrap,jQuery,sweetAlert.
 
 THE PROJECT:
 "It will consist of 2 screens.
